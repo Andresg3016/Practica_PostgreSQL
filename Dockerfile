@@ -1,8 +1,7 @@
 FROM php:8.2-apache
 
-# 1. Instalar dependencias del sistema (combinadas para PostgreSQL, MongoDB y Composer)
+# 1. Instalar dependencias del sistema esenciales
 RUN apt-get update && apt-get install -y \
-    libpq-dev \
     git \
     unzip \
     pkg-config \
@@ -10,29 +9,37 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Actualizar certificados de seguridad y habilitar mod_rewrite de Apache
-RUN update-ca-certificates && a2enmod rewrite
+# 2. Actualizar los certificados de seguridad del contenedor
+RUN update-ca-certificates
 
-# 3. Instalar extensiones de PHP (PostgreSQL nativo y MongoDB vía PECL)
-RUN docker-php-ext-install pdo pdo_pgsql pgsql \
-    && pecl install mongodb-1.20.0 \
+# 3. INSTALACIÓN CRÍTICA: Forzar la versión de la extensión compatible con tu código (Rama 1.x)
+RUN pecl install mongodb-1.20.0 \
     && docker-php-ext-enable mongodb
 
-# 4. Traer Composer desde su imagen oficial y configurar entorno
+# 4. Habilitar el módulo de reescritura de Apache (útil para URLs amigables si las usas)
+RUN a2enmod rewrite
+
+# 5. Traer Composer de forma segura desde su imagen oficial
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# 6. Permitir que Composer se ejecute como Root dentro de Docker sin alertas
 ENV COMPOSER_ALLOW_SUPERUSER=1
 
-# 5. Definir el directorio de trabajo
+# 7. Definir el directorio donde Apache busca la web
 WORKDIR /var/www/html
 
-# 6. Copiar el código del proyecto al contenedor
+# 8. Copiar todo el código de tu repositorio dentro del contenedor
 COPY . .
 
-# 7. Instalar las dependencias de Composer
-RUN composer install --no-interaction --optimize-autoloader
-
-# 8. Ajustar permisos para que Apache (www-data) pueda manejar los archivos
+# 9. Ajustar permisos para que el servidor web Apache (www-data) pueda leer los archivos
 RUN chown -R www-data:www-data /var/www/html
 
-# 9. Exponer el puerto 80
+# 10. Instalar las dependencias de Composer de manera optimizada y sin saltarse la extensión
+RUN composer install --no-interaction --optimize-autoloader
+
+#11. PostgreSQL
+
+RUN docker-php-ext-install pdo pdo_pgsql pgsql \
+    && pecl install mongodb-1.20.0 \
+# 12. Exponer el puerto 80 para que Render pueda redirigir el tráfico web
 EXPOSE 80
