@@ -18,9 +18,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $coleccion = $db->aprendices;   
     
     $resultado = $coleccion->insertOne([
-        "nombre" => $_POST["nombre"] ?? '',
-        "telefono" => $_POST["telefono"] ?? '',
-		"detalles" => $_POST["detalles"] ?? ''
+        "nombre" => $_POST["nom"] ?? '',
+        "telefono" => $_POST["tel"] ?? '',
+		"detalles" => $_POST["det"] ?? ''
 
     ]);
 }
