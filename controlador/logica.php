@@ -9,7 +9,7 @@ $registrar->execute([$_POST["nom"], $_POST["tel"], $_POST["det"]]);
 
 # Conexión con MongoDB Atlas
 
-require 'vendor/autoload.php'; // Cargar Composer
+require '../vendor/autoload.php'; // Cargar Composer
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     
