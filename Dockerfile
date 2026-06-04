@@ -1,22 +1,24 @@
 FROM php:8.2-apache
 
-# 1. Instalar dependencias del sistema esenciales
+# 1. Instalar dependencias del sistema y librerías de desarrollo para Postgres
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
     pkg-config \
     libssl-dev \
+    libpq-dev \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # 2. Actualizar los certificados de seguridad del contenedor
 RUN update-ca-certificates
 
-# 3. INSTALACIÓN CRÍTICA: Forzar la versión de la extensión compatible con tu código (Rama 1.x)
-RUN pecl install mongodb-1.20.0 \
+# 3. Instalar TODAS las extensiones de PHP primero (Postgres y MongoDB)
+RUN docker-php-ext-install pdo pdo_pgsql pgsql \
+    && pecl install mongodb-1.20.0 \
     && docker-php-ext-enable mongodb
 
-# 4. Habilitar el módulo de reescritura de Apache (útil para URLs amigables si las usas)
+# 4. Habilitar el módulo de reescritura de Apache
 RUN a2enmod rewrite
 
 # 5. Traer Composer de forma segura desde su imagen oficial
@@ -25,21 +27,17 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # 6. Permitir que Composer se ejecute como Root dentro de Docker sin alertas
 ENV COMPOSER_ALLOW_SUPERUSER=1
 
-# 7. Definir el directorio donde Apache busca la web
+# 7. Definir el directorio de trabajo
 WORKDIR /var/www/html
 
 # 8. Copiar todo el código de tu repositorio dentro del contenedor
 COPY . .
 
-# 9. Ajustar permisos para que el servidor web Apache (www-data) pueda leer los archivos
-RUN chown -R www-data:www-data /var/www/html
-
-# 10. Instalar las dependencias de Composer de manera optimizada y sin saltarse la extensión
+# 9. Instalar las dependencias de Composer (Ahora sí con todas las extensiones PHP listas)
 RUN composer install --no-interaction --optimize-autoloader
 
-#11. PostgreSQL
+# 10. Ajustar permisos para que Apache (www-data) pueda leer TODO (incluyendo la carpeta vendor nueva)
+RUN chown -R www-data:www-data /var/www/html
 
-RUN docker-php-ext-install pdo pdo_pgsql pgsql \
-    && pecl install mongodb-1.20.0 \
-# 12. Exponer el puerto 80 para que Render pueda redirigir el tráfico web
+# 11. Exponer el puerto 80 para Render u otros servicios
 EXPOSE 80
