@@ -1,0 +1,6 @@
+{
+    "name": "practica/registro-aprendices",
+    "require": {
+        "mongodb/mongodb": "^1.19"
+    }
+}
